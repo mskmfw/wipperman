@@ -1,3 +1,7 @@
+#' @import plyr
+#' @import dplyr
+#' @import phyloseq
+#' @import yingtools2
 #' Print hello
 #'
 #' This function prints hello
