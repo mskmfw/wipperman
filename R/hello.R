@@ -18,8 +18,6 @@ hello <- function(fname, lname) {
 #'
 #' This function plots the results from Curtis Huttenhower's LeFSe output
 #'
-#' @param
-#' @param
 #' @export
 #' @examples plot.lefse.results() #must have a file called lefse.res in working directory
 #' plot.lefse.results()
@@ -35,4 +33,42 @@ plot.lefse.results <- function(){
     geom_text(aes(label=p.value), vjust=0,hjust=-0.1) +
     theme(legend.position="bottom")
   return(p)
+}
+
+#' format.lefse.table
+#'
+#' See Curtis Huttenhower's LeFSe
+#'
+#' @export
+#' @examples format.lefse.table takes a tax.file from blastn output (either 16SMicrobial or refseq_rna) and formats lefse table with class "in quotes
+lefse.format <- function(phyloseq,class) {
+  t <- fread(tax.file,colClasses=c("sallgi"="character","staxids"="character")) %>% tbl_df() %>%
+    mutate(taxonomy=gsub("\\[(superkingdom|phylum|class|order|family|genus|species)\\]","",taxonomy),
+           staxid=as.numeric(sapply(strsplit(staxids,split=";"),first)),
+           otu=paste0(qseqid,";"),
+           otu.number=as.numeric(str_extract(otu,"(?<=OTU_)[0-9]+"))) %>%
+    separate(taxonomy,into=c("Kingdom","Phylum","Class","Order","Family","Genus","Species"),sep="\\|",remove=FALSE) %>%
+    group_by(otu) %>% arrange(evalue,staxid) %>% filter(!duplicated(taxonomy)) %>%
+    mutate(n.ties=sum(dense_rank(evalue)==1),blast.data=paste0(Species," (eval=",evalue,",pid=",pident,")",collapse=";")) %>%
+    filter(row_number()==1) %>% ungroup() %>% arrange(otu.number) %>%
+    dplyr::select(otu,evalue,pident,Kingdom,Phylum,Class,Order,Phylum,Class,Order,Family,Genus,Species,n.ties,blast.data,everything())
+  dat <- t[,c("otu","taxonomy")] #two columns with otu and taxonomy info separated by | symbol for lefse
+  otus <- otu_table(phyloseq)
+  x <- as.data.frame(otus)
+  x <- cbind(otu = rownames(x), x)
+  y <- as.data.frame(t(sample_data(phyloseq)))
+  var <- y[class,]
+  names <- rownames(var)
+  rownames(var) <- NULL
+  var <- cbind(names,var)
+  colnames(var)[1] <- "taxonomy"
+  #write.table(y, file="TB info for lefse.txt", sep="\t")
+  ttt <- left_join(x,dat)
+  ttt$otu <- NULL
+  col_idx <- grep("taxonomy", names(ttt))
+  ttt <- ttt[, c(col_idx, (1:ncol(ttt))[-col_idx])]
+  ttx <- rbind(ttt,var)
+  row_idx <- grep(class,ttx[,1])
+  ttxx <- ttx[c(row_idx,(1:nrow(ttx))[-row_idx]),]
+  write.table(ttxx, file="otus_lefse_IGRA.txt", sep="\t",row.names = F)
 }
