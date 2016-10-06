@@ -62,7 +62,7 @@ lefse.format <- function(phyloseq,class) {
   rownames(var) <- NULL
   var <- cbind(names,var)
   colnames(var)[1] <- "taxonomy"
-  #write.table(y, file="TB info for lefse.txt", sep="\t")
+  #write.table(y, file="info for lefse.txt", sep="\t")
   ttt <- left_join(x,dat)
   ttt$otu <- NULL
   col_idx <- grep("taxonomy", names(ttt))
@@ -70,5 +70,5 @@ lefse.format <- function(phyloseq,class) {
   ttx <- rbind(ttt,var)
   row_idx <- grep(class,ttx[,1])
   ttxx <- ttx[c(row_idx,(1:nrow(ttx))[-row_idx]),]
-  write.table(ttxx, file="otus_lefse_IGRA.txt", sep="\t",row.names = F)
+  write.table(ttxx, file="otus_lefse.txt", sep="\t",row.names = F)
 }
