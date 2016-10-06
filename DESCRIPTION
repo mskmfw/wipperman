@@ -1,11 +1,11 @@
 Package: wipperman
-Title: What the Package Does (one line, title case)
+Title: Tools to assist with microbiome analysis
 Version: 0.0.0.9000
-Authors@R: person("First", "Last", email = "first.last@example.com", role = c("aut", "cre"))
-Description: What the package does (one paragraph).
+Authors@R: person("Matthew", "Wipperman", role = c("aut", "cre"))
+Description: This package contains useful functions for the analysis and visualization of microbiome data. 
 Depends:
     R (>= 3.3.0)
-License: What license is it under?
+License: I'm not fancy enough to have a License. 
 Encoding: UTF-8
 LazyData: true
 RoxygenNote: 5.0.1
