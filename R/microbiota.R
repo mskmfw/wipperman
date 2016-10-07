@@ -76,3 +76,28 @@ lefse.format <- function(phyloseq,class) {
   ttxx <- ttx[c(row_idx,(1:nrow(ttx))[-row_idx]),]
   write.table(ttxx, file="otus_lefse.txt", sep="\t",row.names = F)
 }
+
+#' read.otu.melt.phyloseq
+#'
+#' Should load with Ying's Tools (ying14/yingtools) but doesn't for some reason
+#'
+#' @export
+#' @examples read.otu.melt.phyloseq makes a nice table
+read.otu.melt.phyloseq <- function(phy,filter.zero=TRUE,sample_data=TRUE) {
+  #phy0=phy;phy=subset_taxa(phy0,taxa_names(phy0) %in% head(taxa_names(phy0),10))
+  otu0 <- otu_table(phy) %>% as.matrix() %>% melt(varnames=c("otu","sample"),value.name="numseqs") %>% as_data_frame() %>% mutate(otu=as.character(otu),sample=as.character(sample))
+  tax0 <- get.tax(phy)
+  tax0.match <- select(tax0,-otu)[match(otu0$otu,tax0$otu),]
+  otu <- cbind(otu0,tax0.match) %>%
+    group_by(sample) %>% mutate(pctseqs=prop.table(numseqs)) %>% ungroup() %>% tbl_df()
+  if (filter.zero) {
+    otu <- otu %>% filter(numseqs>0)
+  }
+  #add sample data
+  if (sample_data) {
+    samp0 <- get.samp(phy)
+    otu <- otu %>% left_join(samp0,by="sample")
+  }
+  return(otu)
+}
+
