@@ -1,11 +1,14 @@
 Package: wipperman
 Title: Tools to assist with microbiome analysis
 Version: 0.0.0.9000
-Authors@R: person("Matthew", "Wipperman", role = c("aut", "cre"))
-Description: This package contains useful functions for the analysis and visualization of microbiome data. 
+Author: Matthew Wipperman
+Maintainer: Matthew Wipperman <wippermm@mskcc.org>
+Description: This package contains useful functions for the analysis and visualization of microbiome data (some functions are not my own) 
 Depends:
     R (>= 3.3.0)
 License: I'm not fancy enough to have a License. 
 Encoding: UTF-8
 LazyData: true
+Imports:
+    stringr,reshape2,dplyr,tidyr,tibble,readxl,ape,ggplot2,phyloseq,metagenomeSeq,vegan,microbiome
 RoxygenNote: 5.0.1
