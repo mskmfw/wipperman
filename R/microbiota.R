@@ -225,3 +225,44 @@ plot_taxa_summary = function(physeq, Rank, GroupBy = NULL){
   }
   return(pRank)
 }
+
+#' format data for LeFSe or Maaslin (Huttenhower lab)
+#'
+#' This function formats a data table for maaslin, and then writes a tsv file called maaslin.data.output.tsv to be used as input to Maaslin (or lefse, if only one metadata is provided)
+#'
+#' @param tsv.data
+#' @param metadata1
+#' @param metadata2
+#' @param metadata3
+#' @param metadata4
+#' @param metadata5
+#' @export
+#' @examples
+#' maaslin.format.data("data.in.working.directory.tsv",metadata1 = age,metadata2 = sex,metadata3 = etc)
+maaslin.format.data <- function(tsv.data,metadata1,metadata2,metadata3,metadata4,metadata5){
+  tsv.data <- read.delim(tsv.data) %>% cleanup.data()
+  colnames(tsv.data) <- str_sub(colnames(tsv.data), start=1,end=11) #sample IDs have 11 characters to begin with
+  
+  sample.data <- get.samp(phy)
+  rownames(sample.data) <- sample.data$sample
+  
+  keepvars <- c(metadata1,metadata2,metadata3,metadata4,metadata5)
+  keepvars <- unique(keepvars[!is.na(keepvars)])
+  samp <- get.samp(phy)[, keepvars]
+  
+  sample0 <- t(samp) %>% as.matrix()
+  colnames(sample0) <- sample0[1,] 
+  sample0 <- sample0 %>% as.data.frame()
+  
+  data0 <- tsv.data %>% as.data.frame()
+  rownames(data0) <- data0[,1]
+  data0$X.SampleID <- NULL
+  
+  data1 <- data0 %>% as.data.table(keep.rownames=T)
+  sample1 <- sample0 %>% as.data.table(keep.rownames=T)
+  
+  common <- intersect(colnames(data1), colnames(sample1))
+  pre.Maaslin <- rbind(sample1, data1,fill=T) %>% t() %>% na.omit() %>% t()
+  
+  write.table(pre.Maaslin,file = "maaslin.data.output.tsv",sep = "\t",row.names = F,col.names = F,quote = F)
+}
