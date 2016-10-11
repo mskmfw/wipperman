@@ -239,14 +239,14 @@ plot_taxa_summary = function(physeq, Rank, GroupBy = NULL){
 #' @export
 #' @examples
 #' maaslin.format.data("data.in.working.directory.tsv",metadata1 = age,metadata2 = sex,metadata3 = etc)
-maaslin.format.data <- function(tsv.data,metadata1,metadata2,metadata3,metadata4,metadata5){
+maaslin.format.data <- function(tsv.data,metadata1){
   tsv.data <- read.delim(tsv.data) %>% cleanup.data()
   colnames(tsv.data) <- str_sub(colnames(tsv.data), start=1,end=11) #sample IDs have 11 characters to begin with
   
   sample.data <- get.samp(phy)
   rownames(sample.data) <- sample.data$sample
   
-  keepvars <- c(metadata1,metadata2,metadata3,metadata4,metadata5)
+  keepvars <- c(metadata1)
   keepvars <- unique(keepvars[!is.na(keepvars)])
   samp <- get.samp(phy)[, keepvars]
   
@@ -265,4 +265,81 @@ maaslin.format.data <- function(tsv.data,metadata1,metadata2,metadata3,metadata4
   pre.Maaslin <- rbind(sample1, data1,fill=T) %>% t() %>% na.omit() %>% t()
   
   write.table(pre.Maaslin,file = "maaslin.data.output.tsv",sep = "\t",row.names = F,col.names = F,quote = F)
+}
+
+#' format a table for LeFSe and run LeFSe on the system
+#'
+#' This function formats a data table (.txt file) for lefse, and then runs it 
+#' @param tsv.data
+#' @param class
+#' @export
+#' @examples
+#' this function takes as input the tsv file produced from Metaphlan, HUmann, etc, and converts
+#' it into an output txt file for lefse, and then runs lefse. LeFSe must be in the system $PATH, 
+#' which you can test using system("echo $PATH") in RStudio. If you open a terminal window and type
+#' "echo $PATH", and lefse is in the $PATH, but it does not work in RStudio, close RStudio and re-open
+#' using the command in the terminal "open -a RStudio", which will result in RStudio inheriting the
+#' system $PATH. You must have a Phyloseq object in the Global Environment named phy for this function
+#' to work, and you must have yingtools2 installed and loaded
+
+lefse.format.command <- function(tsv.data, class, subclass = NA, subject = NA, anova.alpha = 0.05, 
+                                 wilcoxon.alpha = 0.05, lda.cutoff = 2, wilcoxon.within.subclass = FALSE, 
+                                 one.against.one = FALSE, mult.test.correction = 0, make.lefse.plots = FALSE, 
+                                 by_otus = FALSE, levels = rank_names(phy) ){
+  
+  tsv.data <- read.delim(tsv.data) %>% cleanup.data()
+  #this may have to be modifided, but this will result in the metagenomics output matching the 
+  #sample IDs from the phyloseq object, which is required to format the table 
+  colnames(tsv.data) <- str_sub(colnames(tsv.data), start=1,end=11) #sample IDs have 11 characters to begin with
+  
+  #aquire sample data from phy 
+  sample.data <- phyloseq::sample_data(phy) %>% data.frame(stringsAsFactors = FALSE) %>% tibble::rownames_to_column("sample")
+  rownames(sample.data) <- sample.data$sample
+  
+  keepvars <- c("sample",class)
+  keepvars <- unique(keepvars[!is.na(keepvars)])
+  samp <- sample.data[, keepvars]
+  
+  sample0 <- t(samp) %>% as.matrix()
+  colnames(sample0) <- sample0[1,]
+  sample0 <- as.data.frame(sample0)
+  sample0 <- sample0[2,]%>% as.data.frame()
+  
+  data0 <- tsv.data %>% as.data.frame()
+  rownames(data0) <- data0[,1]
+  data0$X.SampleID <- NULL
+  
+  data1 <- data0 %>% as.data.table(keep.rownames=T)
+  sample1 <- sample0 %>% as.data.table(keep.rownames=T)
+  
+  common <- intersect(colnames(data1), colnames(sample1))
+  pre.lefse <- rbind(sample1, data1,fill=T) %>% t() %>% na.omit() %>% t()
+  
+  write.table(pre.lefse,file = "lefse.txt",sep = "\t",row.names = FALSE,col.names = FALSE,quote = FALSE)
+  
+  ##############
+  opt.class <- paste("-c", which(keepvars %in% class))
+  opt.subclass <- ifelse(is.na(subclass), "", paste("-s", which(keepvars %in% 
+                                                                  subclass)))
+  opt.subject <- ifelse(is.na(subject), "", paste("-u", which(keepvars %in% 
+                                                                subject)))
+  format.command <- paste("format_input.py lefse.txt lefse.in", 
+                          opt.class, opt.subclass, opt.subject, "-o 1000000")
+  system(format.command)
+  lefse.command <- paste("run_lefse.py lefse.in lefse.res", 
+                         "-a", anova.alpha, "-w", wilcoxon.alpha, "-l", lda.cutoff, 
+                         "-e", as.numeric(wilcoxon.within.subclass), "-y", as.numeric(one.against.one), 
+                         "-s", mult.test.correction)
+  system(lefse.command)
+  print("Wrote lefse.res")
+  lefse.out <- read.table("lefse.res", header = FALSE, sep = "\t") %>% 
+    rename(taxon = V1, log.max.pct = V2, direction = V3, 
+           lda = V4, p.value = V5)
+  if (make.lefse.plots) {
+    system("plot_res.py lefse.res lefse_lda.png")
+    print("Wrote lefse_lda.png")
+    system("plot_cladogram.py lefse.res lefse_clado.pdf --format pdf")
+    print("Wrote lefse_clado.pdf")
+  }
+  return(lefse.out)
 }
