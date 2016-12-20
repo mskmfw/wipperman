@@ -343,3 +343,25 @@ lefse.format.command <- function(tsv.data, class, subclass = NA, subject = NA, a
   }
   return(lefse.out)
 }
+
+#' format a table for downstream analysis with OTU table names from phyloseq object (flating point values)
+#'
+#' This function formats a data table (.txt file) for downstream analysis
+#' @param phyloseq object 
+#' @param 
+#' @export
+#' @examples
+otu.table <- function (phy,meta1=NULL,meta2=NULL,meta3=NULL,meta4=NULL) {
+  keepvars <- c("sample",meta1,meta2,meta3,meta4)
+  keepvars <- unique(keepvars[!is.na(keepvars)])
+  samp <- get.samp(phy)[, keepvars]
+  otu <- get.otu.melt(phy)
+  otu.levels <- otu %>% mutate(taxon = otu) %>% group_by(sample,taxon) %>% 
+    summarize(pctseqs = sum(pctseqs)) %>% mutate(taxon = gsub(" ", "_", taxon))
+  otu.tbl <- dcast(otu.levels, sample ~ taxon, value.var = "pctseqs",fill=0) %>% 
+    left_join(samp, by = "sample") %>% select_(.dots = c(keepvars,lazyeval::interp(~everything())))
+  tbl <- otu.tbl %>% t()
+  write.table(tbl, "otu_phyloseq.txt", quote = FALSE, sep = "\t", 
+              col.names = FALSE)
+}
+
